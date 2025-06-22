@@ -1,2 +1,15 @@
-# PyTorch_LSTM_PLTR
-This is an LSTM model made in PyTorch to track and predict stock prices of PLTR from 06/21/22 to 06/21/25
+# LSTM tracking PLTR stock 2022-06-21 to 2025-06-20 in Pytorch
+
+This is an LSTM model made in PyTorch to track and predict stock prices of PLTR from 06/21/22 to 06/21/25. It takes 95% of the data
+as training data then learns the parameters of the stock value.  and 5% as testing data
+
+## Work Left to Do
+- I plan on implementing an MSE loss function.
+- As well an Adam optimization function.
+- After training it will predict where the line should be.
+- Visualize the data in matplotlib.
+
+## About this Project
+I made this project as I've always been interested in the stock market and I wanted to get familiar, somewhat, with how AI works in
+the industry. To do this I made an LSTM model that tracks the Palantir stock. The reason I choose the Palantir stock is as it is the
+stock I've made the most money on in the past. So I wanted to see if I could predict the price of the stock using an AI.
