@@ -9,7 +9,12 @@ from copy import deepcopy as dc
 from sklearn.preprocessing import MinMaxScaler
 
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-data = pd.read_csv('AMZN.csv')
+data = pd.read_csv('PLTR.csv')
+# We have to strip the whitespace and reverse the data as it currently goes 
+# 2025-2022.
+data.columns = data.columns.str.strip()
+data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%y')
+data = data.sort_values(by='Date', ascending=True).reset_index(drop=True)
 # As we are only forecasting the stocks price at close each day we will 
 # only use that data.
 data = data[['Date', 'Close']]
@@ -66,3 +71,28 @@ batchSize = 16
 # to the training data order
 trainLoader = DataLoader(trainDataset, batch_size=batchSize, shuffle=True) 
 testLoader = DataLoader(testDataset, batch_size=batchSize, shuffle=False)
+# Now to make the LSTM training model.
+class LSTM(nn.Module):
+    def __init__(self, inputSize, hiddenSize, numStackedLayers):
+        super().__init__()
+        self.hiddenSize = hiddenSize
+        self.numStackedLayers = numStackedLayers
+        # Define LSTM layer.
+        self.lstm = nn.LSTM(inputSize, hiddenSize, numStackedLayers, batch_first=True)
+        # Define fully connected Linear layer to map from hidden state 
+        # to output.
+        self.fc = nn.Linear(hiddenSize, 1)
+        
+    def forward(self, x):
+        batchSize = x.size(0)
+        # Initialie hidden and cell states with all zeroes.
+        h0, c0 = torch.zeros(self.numStackedLayers, batchSize, self.hiddenSize).to(device), torch.zeros(self.numStackedLayers, batchSize, self.hiddenSize).to(device)
+        # Pass the input through the LSTM layer.
+        out, _ = self.lstm(x, (h0, c0))
+        # Take the last time steps output for each sequence in the batch.
+        out = self.fc(out[:, -1, :])
+        return out
+# Define the model with one feature, 4 neurons per LSTM layer, with one 
+# LSTM layer.
+modelOne = LSTM(1, 4, 1)
+modelOne.to(device)
