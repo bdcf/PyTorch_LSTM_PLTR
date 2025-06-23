@@ -96,3 +96,71 @@ class LSTM(nn.Module):
 # LSTM layer.
 modelOne = LSTM(1, 4, 1)
 modelOne.to(device)
+learnRate = 0.001
+epoch = 100
+lossFunc = nn.MSELoss()
+optFunc = torch.optim.Adam(modelOne.parameters(), lr= learnRate)
+
+def trainEpoch():
+    modelOne.train(True)
+    print(f'Epoch: {epoch + 1}')
+    runningLoss = 0.0
+    # Loop through to get data from trainLoader batches
+    for i, batch in enumerate(trainLoader):
+        fbatch, tbatch = batch[0].to(device), batch[1].to(device)
+        # Compute predictions.
+        output = modelOne(fbatch)
+        # Compute loss between predictions and the ground truth.
+        loss = lossFunc(output, tbatch)
+        runningLoss += loss
+        # Zero out gradients from the previous step.
+        optFunc.zero_grad()
+        # Use a backpropogation pass to compute gradient.
+        loss.backward()
+        # Take a step in direction of gradient.
+        optFunc.step()
+        if i % 100 == 99:
+            avgBatchLoss = runningLoss / 100
+            print(f'Batch {i + 1}, Loss: {avgBatchLoss}')
+            runningLoss = 0.0
+    print()
+
+def validateEpoch():
+    modelOne.train(False)
+    runningLoss = 0.0
+    # Go through to get batches from testLoader
+    for i, batch in enumerate (testLoader):
+        fbatch, tbatch = batch[0].to(device), batch[1].to(device)
+        with torch.no_grad():
+            output = modelOne(fbatch)
+            # Compute loss between predictions and the ground truth.
+            loss = lossFunc(output, tbatch)
+            runningLoss += loss
+
+    avgBatchLoss = runningLoss / len(testLoader)
+    print(f'Val Loss: {avgBatchLoss}')
+
+for epoch in range(1, epoch):
+    trainEpoch()
+    validateEpoch()
+
+with torch.no_grad():
+    predict = modelOne(fTrain.to(device)).to('cpu').numpy()
+tPredict = predict.squeeze()
+dummyTensor = np.zeros((tPredict.shape[0], lookBack+1))
+# Insert flattened predictions into first column of dummy array
+dummyTensor[:, 0] = tPredict
+# Get a deepcopy of first column
+tPredict = scaler.inverse_transform(dummyTensor)[:, 0]
+
+nTTrain = tTrain.squeeze().cpu().numpy()
+dummyTensor = np.zeros((fTrain.shape[0], lookBack+1))
+dummyTensor[:, 0] = nTTrain
+nTTrain = scaler.inverse_transform(dummyTensor)[:, 0]
+
+plt.plot(nTTrain, label='Actual Close')
+plt.plot(tPredict, label='Predicted Close')
+plt.xlabel('Day')
+plt.ylabel('Close')
+plt.legend()
+plt.show()
