@@ -10,13 +10,11 @@ from sklearn.preprocessing import MinMaxScaler
 
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 data = pd.read_csv('PLTR.csv')
-# We have to strip the whitespace and reverse the data as it currently goes 
-# 2025-2022.
+# We have to strip the whitespace and reverse the data as it currently goes 2025-2022.
 data.columns = data.columns.str.strip()
 data['Date'] = pd.to_datetime(data['Date'], format='%m/%d/%y')
 data = data.sort_values(by='Date', ascending=True).reset_index(drop=True)
-# As we are only forecasting the stocks price at close each day we will 
-# only use that data.
+# As we are only forecasting the stocks price at close each day we will only use that data.
 data = data[['Date', 'Close']]
 # Convert the raw Date data to a Pandas datetime object.
 data['Date'] = pd.to_datetime(data['Date'])
@@ -25,8 +23,7 @@ def prepLSTMDataFrame(df, n_steps):
     # Load each row as a dataframe for the LSTM.
     df = dc(df)
     df.set_index('Date', inplace=True)
-    # Creates n_steps new columns with previous Close values, shifted back 
-    # 1 to n_steps.
+    # Creates n_steps new columns with previous Close values, shifted back 1 to n_steps.
     for i in range(1, n_steps + 1):
         df[f'Close(t-{i})'] = df['Close'].shift(i)
     # If any columns are N/A then we get rid of them.
@@ -49,10 +46,7 @@ fTrain = torch.tensor(fTrain, dtype=torch.float32).unsqueeze(2)
 fTest = torch.tensor(fTest, dtype=torch.float32).unsqueeze(2)    
 tTrain = torch.tensor(tTrain, dtype=torch.float32).unsqueeze(1)            
 tTest = torch.tensor(tTest, dtype=torch.float32).unsqueeze(1)
-# print(f'{fTest.shape}{fTrain.shape}{tTest.shape}{tTrain.shape}') to 
-# make sure the unsqueeze added an extra dimension [Testing].
-# We have to build a dataset of our train and test data of tuples for
-# AI training and testing
+# print(f'{fTest.shape}{fTrain.shape}{tTest.shape}{tTrain.shape}') to make sure the unsqueeze added an extra dimension [Testing]. We have to build a dataset of our train and test data of tuples for AI training and testing
 class buildDataset(Dataset):
     def __init__(self, x, y):
         self.x = x
@@ -63,12 +57,9 @@ class buildDataset(Dataset):
         return self.x[index], self.y[index]
 trainDataset = buildDataset(fTrain, tTrain)
 testDataset = buildDataset(fTest, tTest)
-# We now will put our dataset into a data loader to normalize batch 
-# sizes for our normalized data.(friends don't let friends use batch 
-# sizes of >32)
+# We now will put our dataset into a data loader to normalize batch sizes for our normalized data.(friends don't let friends use batch sizes of >32)
 batchSize = 16
-# Set shuffle to true on training data so the AI does not get used 
-# to the training data order
+# Set shuffle to true on training data so the AI does not get used to the training data order
 trainLoader = DataLoader(trainDataset, batch_size=batchSize, shuffle=True) 
 testLoader = DataLoader(testDataset, batch_size=batchSize, shuffle=False)
 # Now to make the LSTM training model.
@@ -79,8 +70,7 @@ class LSTM(nn.Module):
         self.numStackedLayers = numStackedLayers
         # Define LSTM layer.
         self.lstm = nn.LSTM(inputSize, hiddenSize, numStackedLayers, batch_first=True)
-        # Define fully connected Linear layer to map from hidden state 
-        # to output.
+        # Define fully connected Linear layer to map from hidden state to output.
         self.fc = nn.Linear(hiddenSize, 1)
         
     def forward(self, x):
@@ -92,8 +82,7 @@ class LSTM(nn.Module):
         # Take the last time steps output for each sequence in the batch.
         out = self.fc(out[:, -1, :])
         return out
-# Define the model with one feature, 4 neurons per LSTM layer, with one 
-# LSTM layer.
+# Define the model with one feature, 4 neurons per LSTM layer, with one LSTM layer.
 modelOne = LSTM(1, 4, 1)
 modelOne.to(device)
 learnRate = 0.001
@@ -136,14 +125,11 @@ def validateEpoch():
             # Compute loss between predictions and the ground truth.
             loss = lossFunc(output, tbatch)
             runningLoss += loss
-
     avgBatchLoss = runningLoss / len(testLoader)
     print(f'Val Loss: {avgBatchLoss}')
-
 for epoch in range(1, epoch):
     trainEpoch()
     validateEpoch()
-
 with torch.no_grad():
     predict = modelOne(fTrain.to(device)).to('cpu').numpy()
 tPredict = predict.squeeze()
@@ -158,6 +144,7 @@ dummyTensor = np.zeros((fTrain.shape[0], lookBack+1))
 dummyTensor[:, 0] = nTTrain
 nTTrain = scaler.inverse_transform(dummyTensor)[:, 0]
 
+# Plot and present all the data predicted and actual from the LSTM model.
 plt.plot(nTTrain, label='Actual Close')
 plt.plot(tPredict, label='Predicted Close')
 plt.xlabel('Day')
